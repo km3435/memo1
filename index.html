@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-SPACE | بوابة التوثيق الخاصة بمريم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #04060a;
+            --card-bg: rgba(9, 13, 22, 0.7);
+            --border-glow: rgba(59, 130, 246, 0.25);
+            --blue-neon: #3b82f6;
+            --purple-neon: #8b5cf6;
+            --text-white: #f8fafc;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-white); min-height: 100vh; overflow-x: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
+        
+        #spaceCanvas, #confettiCanvas, #visualizerCanvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        #confettiCanvas { z-index: 5; opacity: 0; transition: opacity 0.5s; }
+        #visualizerCanvas { z-index: 1; opacity: 0; transition: opacity 1s ease; }
+
+        /* 🔒 شاشة تسجيل الدخول */
+        .auth-quantum-container {
+            position: relative; z-index: 10; background: var(--card-bg); border: 1px solid var(--border-glow);
+            padding: 40px; border-radius: 24px; width: 100%; max-width: 400px; backdrop-filter: blur(20px);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 30px rgba(59, 130, 246, 0.1); text-align: center;
+        }
+        .auth-logo { font-size: 32px; font-weight: 900; margin-bottom: 8px; letter-spacing: 1px; }
+        .auth-logo span { color: var(--blue-neon); text-shadow: 0 0 15px var(--blue-neon); }
+        .auth-subtitle { font-size: 13px; color: #64748b; margin-bottom: 30px; font-weight: 600; }
+        .input-group { position: relative; margin-bottom: 20px; text-align: right; }
+        .input-group label { display: block; font-size: 12px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; }
+        .input-group input {
+            width: 100%; background: rgba(4, 6, 10, 0.8); border: 1px solid rgba(255,255,255,0.05);
+            padding: 14px 44px 14px 16px; border-radius: 12px; color: #fff; font-size: 14px; outline: none; transition: all 0.3s;
+        }
+        .input-group input:focus { border-color: var(--blue-neon); box-shadow: 0 0 15px rgba(59,130,246,0.15); }
+        .input-group i { position: absolute; right: 16px; bottom: 15px; color: #475569; font-size: 16px; }
+        .input-group input:focus + i { color: var(--blue-neon); }
+        .auth-btn {
+            background: linear-gradient(135deg, var(--blue-neon), var(--purple-neon)); color: white; border: none;
+            padding: 15px; width: 100%; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer;
+            transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .auth-btn:hover { box-shadow: 0 0 25px rgba(59, 130, 246, 0.4); transform: translateY(-2px); }
+        .toast-msg { display: none; background: rgba(244, 63, 94, 0.1); border: 1px solid #f43f5e; color: #f43f5e; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+
+        /* 🕹️ شاشة الغرفة والأسئلة والمقالب */
+        .workspace-portal {
+            display: none; width: 100%; max-width: 950px; height: 600px; background: var(--card-bg);
+            border: 1px solid var(--border-glow); border-radius: 24px; z-index: 10; overflow: hidden;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.7); backdrop-filter: blur(20px);
+        }
+        .sidebar-panel { width: 260px; background: rgba(7, 10, 19, 0.8); border-left: 1px solid rgba(255,255,255,0.05); padding: 30px 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .main-game-stage { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; text-align: center; }
+        
+        .nav-item { padding: 12px 14px; border-radius: 10px; color: #64748b; font-weight: 700; display: flex; align-items: center; gap: 12px; font-size: 14px; margin-bottom: 8px; }
+        .nav-item.active { background: linear-gradient(135deg, var(--blue-neon), var(--purple-neon)); color: #fff; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        
+        .troll-assistant-box { background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.25); padding: 12px 18px; border-radius: 14px; color: #fb7185; font-size: 13px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; animation: fadeIn 0.5s ease; }
+
+        .quiz-title { font-size: 20px; font-weight: 900; margin-bottom: 30px; line-height: 1.6; color: #fff; }
+        .options-box { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 420px; position: relative; }
+        .option-btn {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 14px;
+            border-radius: 12px; color: #cbd5e1; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.2s, color 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .option-btn:hover { background: rgba(59, 130, 246, 0.08); border-color: var(--blue-neon); color: #fff; }
+        
+        /* 🚨 تأثير الهروب الكبير للزرار الطاير في الشاشة كلها */
+        .option-btn.runaway { position: fixed; width: 250px; height: 50px; transition: all 0.08s cubic-bezier(0.25, 0.8, 0.25, 1); z-index: 9999; background: #f43f5e; color: #fff; border: none; box-shadow: 0 0 15px rgba(244,63,94,0.4); font-size: 13.5px; }
+        
+        .countdown-timer-box { font-size: 24px; font-weight: 900; color: #f59e0b; text-shadow: 0 0 10px rgba(245,158,11,0.4); margin-bottom: 15px; display: none; }
+
+        /* 💌 شاشة الرسالة المصرية النهائية */
+        .final-message-stage { display: none; flex-direction: column; align-items: center; text-align: center; max-width: 670px; animation: fadeIn 0.8s ease forwards; z-index: 10; padding: 20px; }
+        .avatar-glow { width: 80px; height: 80px; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #10b981; margin-bottom: 25px; box-shadow: 0 0 25px rgba(16, 185, 129, 0.5); }
+        
+        /* 👑 [برواز شريط التعبان الضوئي التفاعلي الملون] */
+        .letter-container-wrapper {
+            position: relative; padding: 4px; border-radius: 24px; background: rgba(255, 255, 255, 0.01);
+            overflow: hidden; margin-bottom: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+        }
+        /* كود شريط التعبان الضوئي المتحرك بالألوان */
+        .letter-container-wrapper::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(#3b82f6, #8b5cf6, #10b981, #f43f5e, #f59e0b, #3b82f6);
+            animation: slitherSnakeBorder 4s linear infinite; z-index: 1;
+        }
+        .letter-body { 
+            position: relative; z-index: 2; font-size: 16.5px; line-height: 2.2; color: #f1f5f9; 
+            font-weight: 600; text-align: justify; background: #070c18; padding: 30px; border-radius: 22px;
+        }
+
+        .audio-control-bar { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; z-index: 10; }
+        .btn-audio { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s; border: none; }
+        .btn-audio:hover { background: #10b981; color: #fff; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        .btn-audio.stop-mode { background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3); color: #f43f5e; display: none; }
+        .btn-audio.stop-mode:hover { background: #f43f5e; color: #fff; box-shadow: 0 0 15px rgba(244, 63, 94, 0.4); }
+        
+        .btn-music-toggle { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; padding: 14px 24px; border-radius: 12px; cursor: pointer; transition: all 0.3s; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; border: none; }
+        .btn-music-toggle:hover { color: #fff; background: #f59e0b; box-shadow: 0 0 15px rgba(245,158,11,0.4); }
+
+        @keyframes slitherSnakeBorder { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <canvas id="spaceCanvas"></canvas>
+    <canvas id="visualizerCanvas"></canvas>
+    <canvas id="confettiCanvas"></canvas>
+
+    <audio id="gorgMusic" loop src="gorg.mp3" preload="auto"></audio>
+
+    <div class="auth-quantum-container" id="authBox">
+        <div class="auth-logo">K<span>·SPACE</span></div>
+        <div class="auth-subtitle"><i class="fa-solid fa-satellite"></i> مصادقة تصريح الوصول الآمن لـ مريم</div>
+        
+        <div class="toast-msg" id="errorToast">⚠️ البيانات مش مظبوطة يا مريم! ركزي كدا في الباسورد.</div>
+
+        <form onsubmit="validateAuthPipeline(event)">
+            <div class="input-group">
+                <label>معرّف الهوية الرقمي (Username)</label>
+                <input type="text" id="usernameField" required placeholder="اسمك بالكامل بالأنكليزي سمول..." autocomplete="off">
+                <i class="fa-solid fa-user-astronaut"></i>
+            </div>
+            <div class="input-group">
+                <label>شفرة العبور والتحقق (Password)</label>
+                <input type="password" id="passwordField" required placeholder="••••••••">
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <button type="submit" class="auth-btn"><i class="fa-solid fa-fingerprint"></i> فتح بوابة الأثير</button>
+        </form>
+    </div>
+
+    <div class="workspace-portal" id="gamePortal">
+        <div style="display: flex; width: 100%; height: 100%;">
+            
+            <div class="sidebar-panel">
+                <div>
+                    <div style="font-size: 20px; font-weight: 900; color:#fff; margin-bottom: 30px;"><i class="fa-solid fa-brain" style="color:var(--blue-neon);"></i> M-RADAR</div>
+                    <div class="nav-item active" id="sideNav1"><i class="fa-solid fa-gamepad"></i> فرفشة تيم</div>
+                    <div class="nav-item" id="sideNav2"><i class="fa-solid fa-envelope-open-text"></i> فك التشفير</div>
+                </div>
+                <div style="font-size: 11px; color:#475569; font-weight: 700; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+                    ENGINE BY: KR-MOHAMED // 2026
+                </div>
+            </div>
+
+            <div class="main-game-stage" id="stageContent">
+                </div>
+
+        </div>
+    </div>
+
+    <div class="final-message-stage" id="finalMessageStage">
+        <div class="avatar-glow"><i class="fa-solid fa-crown"></i></div>
+        <h2 style="font-size: 26px; font-weight: 900; margin-bottom: 8px; color: #10b981; text-shadow: 0 0 15px rgba(16,185,129,0.3);">حمد الله على سلامتك يا مريم ✨</h2>
+        <p style="color: var(--blue-neon); font-weight: 700; margin-bottom: 25px; font-size: 14px; letter-spacing: 0.5px;">📡 برقية خاصة جداً طالعة من القلب</p>
+        
+        <div class="letter-container-wrapper">
+            <div class="letter-body" id="textToSpeak">
+                بصي يا مريم، أنا عرفت إنك تعبانة ومودك مش مظبوط اليومين دول، وبما إنك صديقة غالية وعزيزة جداً، حبيت أعملك المفاجأة والموقع ده مخصوص عشان يخرجك من المود تماماً وتضحكي. أتمنى الأسئلة والمقالب الحركية اللى فاتت دي تكون رسمت الابتسامة على وشك ونسيتك أي تعب أو مخنقة. وعشان عارف إنك بتحبي جورج وسوف، مجهزلك أغنية ليه مخصوص تشتغل حالا أول ما تفتحي الكلام لزوم الترويق وتظبيط المود السَلطني. الشدة دي وعكة خفيفة جداً وهتعدي في ثانية وتكوني زي الفل، وترجعي تملي الدنيا بهجة وطاقة من تاني. خليكي دايماً فاكرة إن ضحكتك غالية، وصحتك وسلامة قلبك بالدنيا كلها عند كل اللى بيحبوكي. يومك جميل وكله تفاؤل يا مريم، وجدعني كدا وقومي بالسلامة! صديقك كريم .
+            </div>
+        </div>
+
+        <div class="audio-control-bar">
+            <button id="playAudioBtn" class="btn-audio" onclick="speakFinalLetter()"><i class="fa-solid fa-comment-dots"></i> اقرئي الرسالة بصوت الـ AI</button>
+            <button id="stopAudioBtn" class="btn-audio stop-mode" onclick="stopSpeakingPipeline()"><i class="fa-solid fa-volume-xmark"></i> إيقاف صوت الـ AI</button>
+            <button class="btn-music-toggle" onclick="toggleGorgMusic()"><i class="fa-solid fa-radio"></i> تشغيل/كتم أبو وديع 🎵</button>
+        </div>
+    </div>
+
+    <script>
+        const quizPipeline = [
+            {
+                question: "لو صحيتي الصبح فجأة لقيتي نفسك بقيتي كائن فضائي وهبطتي في وسط قاهرة المعز.. أول حاجة هتعمليها إيه؟",
+                troll: "🤖 المشاكس الآلي: فضائي مرة واحدة؟ يارب يكون كائن طيب ومبيكلش الأكل بتاعنا بس!",
+                options: [
+                    { text: "هروح أفطر فول وطعمية على عربية في الحسين فوراً", action: "next" },
+                    { text: "هعمل بلوك لـ كريم محمد عشان المفاجآت الغريبة بتاعته دي", action: "funny" },
+                    { text: "هخطف المركبة الفضائية وأرجع على كوكبي تاني جري", action: "next" }
+                ]
+            },
+            {
+                question: "سؤال جاد جداً ومحتاج ذكاء مصري صميم: تفتكري مين اللى أكل حتة الشوكولاتة الأخيرة اللى في الثلاجة؟ 🍫",
+                troll: "🤖 المشاكس الآلي: الشوكولاتة طارت يا مريم، اعترفي مين اللى عملها؟",
+                options: [
+                    { text: "قطة البيت فتحت الباب بذكاء خارق وأكلتها", action: "next" },
+                    { text: "أكيد كريم محمد وهو قاعد بيفكر في أفكار للموقع بليل", action: "next" },
+                    { text: "أنا بريئة وعاملة مقاطعة للثلاجة الأسبوع ده اساساً", action: "next" }
+                ]
+            },
+            {
+                question: "لو نمتي وصحيتي لقيتي نفسك في سنة 2100 والناس بتركب عربيات طايرة.. تفتكري الستات لسه بتسأل 'هنتغدا إيه بكرا'؟ 🚀",
+                troll: "🤖 المشاكس الآلي: السؤال ده ملوش حل حتى عند الفضائيين يا مريم!",
+                options: [
+                    { text: "آه طبعاً وهتكون كبسولات غدا مشفرة", action: "next" },
+                    { text: "لأ هيكونوا اخترعوا حبوب تمنع التفكير في الأكل", action: "next" },
+                    { text: "المهم نخلص من حيرة كل يوم دي بأي تكنولوجيا", action: "next" }
+                ]
+            },
+            {
+                question: "لو اشتريتي بطيخة وطلعت قرعة تماماً والراجل حلف لك إنها حمرا.. هتعملي إيه؟ 🍉",
+                troll: "🤖 المشاكس الآلي: البطيخ حظوظ.. بس حظك هنا مقالب بس!",
+                options: [
+                    { text: "هقنع نفسي إن البطيخ الأبيض موضة السنة دي", action: "next" },
+                    { text: "هروح أرجعها للراجل وأقوله دي بطيخة بايزه مش شغالة", action: "next" },
+                    { text: "هعمل بيها عصير وأمري لله وخلاص", action: "next" }
+                ]
+            },
+            {
+                question: "بما إنك تعبانة شوية ومودك مش في المود.. هل مسموح ليكي تستسلمي وتفضلي زعلانة؟",
+                troll: "🤖 المشاكس الآلي: وصلنا للسؤال الأخير.. وريني الماوس هيروح فين!",
+                options: [
+                    { text: "لأ طبعاً.. الضحكة هترجع حالا والزعل هيطير في الهوا! 🚀", action: "triggerButtonMarathon" },
+                    { text: "آه مسموح لي وهفضل زعلانة ومقريفة", action: "runaway" }
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let speechSynthInstance = window.speechSynthesis;
+        let speechUtterance = null;
+        let confettiActive = false;
+        let confettiParticles = [];
+        
+        let secondsLeft = 40;
+        let countdownInterval = null;
+        let isMarathonActive = false;
+        let visualizerActive = false;
+
+        // تشيك اللوجين
+        function validateAuthPipeline(e) {
+            e.preventDefault();
+            const user = document.getElementById('usernameField').value.trim().toLowerCase();
+            const pass = document.getElementById('passwordField').value.trim();
+            const toast = document.getElementById('errorToast');
+
+            if (user === 'mariem' && pass === '2005') {
+                toast.style.display = 'none';
+                document.getElementById('authBox').style.display = 'none';
+                document.getElementById('gamePortal').style.display = 'block';
+                renderQuizStage();
+            } else {
+                toast.style.display = 'block';
+            }
+        }
+
+        function renderQuizStage() {
+            const stage = document.getElementById('stageContent');
+            const currentData = quizPipeline[currentQuestionIndex];
+            
+            let optionsHTML = '';
+            currentData.options.forEach(opt => {
+                if(opt.action === 'runaway') {
+                    optionsHTML += `<button class="option-btn runaway" id="runawayBtn" onmouseenter="makeButtonRunaway()">${opt.text}</button>`;
+                } else {
+                    optionsHTML += `<button class="option-btn" onclick="handleOptionClick('${opt.action}')">${opt.text}</button>`;
+                }
+            });
+
+            stage.innerHTML = `
+                <div class="troll-assistant-box"><i class="fa-solid fa-ghost"></i> <span>${currentData.troll}</span></div>
+                <div class="quiz-title"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--blue-neon); margin-left:8px;"></i> ${currentData.question}</div>
+                <div class="options-box" id="optBoxContainer">${optionsHTML}</div>
+            `;
+        }
+
+        function handleOptionClick(action) {
+            if (action === 'funny') {
+                alert("بقى كدا يا مريم؟ بلوك لكريم علطول؟ 😂.. ماشي حسابنا بعدين، يلا على السؤال اللى بعده ونشوف اختياراتك.");
+            }
+            
+            if (action === 'triggerButtonMarathon') {
+                startSecretButtonMarathon();
+                return;
+            }
+
+            currentQuestionIndex++;
+            renderQuizStage();
+        }
+
+        function makeButtonRunaway() {
+            const btn = document.getElementById('runawayBtn');
+            const maxX = window.innerWidth - btn.clientWidth - 40;
+            const maxY = window.innerHeight - btn.clientHeight - 40;
+            btn.style.left = Math.floor(Math.random() * Math.max(20, maxX)) + 'px';
+            btn.style.top = Math.floor(Math.random() * Math.max(20, maxY)) + 'px';
+        }
+
+        // 🚨 المارثون: زرار فتح الرسالة بيلف الشاشة بجنون والآلي شغال نكش مصري مستفز
+        function startSecretButtonMarathon() {
+            isMarathonActive = true;
+            const stage = document.getElementById('stageContent');
+            
+            stage.innerHTML = `
+                <div class="countdown-timer-box" id="timerBox" style="display:block;">⏳ فك التشفير معلق: فاضل <span id="secondsNum">40</span> ثانية نكش متواصل</div>
+                <div class="troll-assistant-box"><i class="fa-solid fa-face-grin-tease"></i> <span id="trollLiveSpan">🤖 المشاكس الآلي: يلا يا مريم ورينا سرعتك بقى.. الحقي الزرار! 😂</span></div>
+                <button class="option-btn runaway" id="finalSecretBtn" style="top:50%; left:50%; width:280px; background:linear-gradient(135deg, #f59e0b, #f43f5e);" onmouseenter="makeFinalButtonRunaway()" onclick="triggerFinalMessageVictory()">✉️ فك تشفير رسالة كريم محمد</button>
+            `;
+
+            countdownInterval = setInterval(() => {
+                secondsLeft--;
+                document.getElementById('secondsNum').textContent = secondsLeft;
+                
+                if(secondsLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    isMarathonActive = false;
+                    const finalBtn = document.getElementById('finalSecretBtn');
+                    finalBtn.classList.remove('runaway');
+                    finalBtn.style.position = 'static';
+                    finalBtn.style.margin = '30px auto';
+                    finalBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                    document.getElementById('timerBox').innerHTML = "✅ خلاص يا ستي هديت واستسلمت.. تقدري تفتحي الرسالة دلوقتي!";
+                    document.getElementById('trollLiveSpan').textContent = "🤖 خلاص يا عم كريم البنت جابت آخرها.. افتحي الرسالة يا مريم ونورينا بضحكتك!";
+                }
+            }, 1000);
+        }
+
+        function makeFinalButtonRunaway() {
+            if(!isMarathonActive) return; 
+            const btn = document.getElementById('finalSecretBtn');
+            const maxX = window.innerWidth - btn.clientWidth - 60;
+            const maxY = window.innerHeight - btn.clientHeight - 60;
+            
+            btn.style.left = Math.floor(Math.random() * Math.max(30, maxX)) + 'px';
+            btn.style.top = Math.floor(Math.random() * Math.max(30, maxY)) + 'px';
+            
+            const marathonReplies = [
+                "🤖 المشاكس الآلي: هاا.. قربتي؟ لأ ضحكت عليكي بردو هربت تاني! 🤪",
+                "🤖 المشاكس الآلي: دوسي على الزرار طيب.. لو شاطرة امسكيه! 🏃‍♀️",
+                "🤖 المشاكس الآلي: لأ لأ.. ضحكت عليكي تاني، كريم مبرمجه على الطيران السريع!",
+                "🤖 المشاكس الآلي: خلاص كنتي هتدوسي؟ معلش راحت عليكي هربت في ثانية! 😂",
+                "🤖 المشاكس الآلي: معلش معلش.. جربي تاني بردو ضحكت عليكي! 🦾"
+            ];
+            document.getElementById('trollLiveSpan').textContent = marathonReplies[Math.floor(Math.random() * marathonReplies.length)];
+        }
+
+        // 💥 الانتصار الكبير وتشغيل أغنية جورج والكونفيتي والمساوي التفاعلي
+        function triggerFinalMessageVictory() {
+            if(isMarathonActive) return; 
+            document.getElementById('gamePortal').style.display = 'none';
+            document.getElementById('finalMessageStage').style.display = 'flex';
+            
+            startConfettiExplosion();
+            playGorgMusicEngine();
+            
+            // تشغيل تأثير الـ Audio Visualizer الانبهاري المضيء في الخلفية
+            document.getElementById('visualizerCanvas').style.opacity = '0.4';
+            visualizerActive = true;
+        }
+
+        function playGorgMusicEngine() {
+            const audio = document.getElementById('gorgMusic');
+            audio.volume = 0.4;
+            audio.play().catch(e => console.log("الصوت يعمل بعد كليك المستخدم"));
+        }
+
+        function toggleGorgMusic() {
+            const audio = document.getElementById('gorgMusic');
+            if(audio.paused) audio.play();
+            else audio.pause();
+        }
+
+        function startConfettiExplosion() {
+            const canvas = document.getElementById('confettiCanvas');
+            canvas.style.opacity = '1';
+            confettiActive = true;
+            
+            const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f43f5e', '#f59e0b', '#ec4899'];
+            for (let i = 0; i < 100; i++) {
+                confettiParticles.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * -window.innerHeight - 20,
+                    size: Math.random() * 5 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    speedY: Math.random() * 3 + 2,
+                    speedX: Math.random() * 2 - 1,
+                    rotation: Math.random() * 360,
+                    rotationSpeed: Math.random() * 4 - 2
+                });
+            }
+        }
+
+        function speakFinalLetter() {
+            const text = document.getElementById('textToSpeak').textContent;
+            if (!speechSynthInstance) return;
+            speechSynthInstance.cancel();
+
+            speechUtterance = new SpeechSynthesisUtterance(text);
+            speechUtterance.lang = 'ar-EG';
+            speechUtterance.rate = 0.90;
+            speechUtterance.pitch = 1.0;
+
+            speechUtterance.onstart = () => {
+                document.getElementById('playAudioBtn').style.display = 'none';
+                document.getElementById('stopAudioBtn').style.display = 'inline-block';
+            };
+
+            speechUtterance.onend = () => { resetAudioUi(); };
+            speechUtterance.onerror = () => { resetAudioUi(); };
+
+            speechSynthInstance.speak(speechUtterance);
+        }
+
+        function stopSpeakingPipeline() {
+            if (speechSynthInstance) {
+                speechSynthInstance.cancel();
+                resetAudioUi();
+            }
+        }
+
+        function resetAudioUi() {
+            document.getElementById('playAudioBtn').style.display = 'inline-block';
+            document.getElementById('stopAudioBtn').style.display = 'none';
+        }
+
+        // 🚀 الـ Animation Loop الموحدة لتشغيل كرت النجوم والورق الملون والموجات التفاعلية بصورة فائقة السلاسة
+        window.addEventListener('DOMContentLoaded', () => {
+            const spaceCanvas = document.getElementById('spaceCanvas'); const sCtx = spaceCanvas.getContext('2d');
+            const confCanvas = document.getElementById('confettiCanvas'); const cCtx = confCanvas.getContext('2d');
+            const visCanvas = document.getElementById('visualizerCanvas'); const vCtx = visCanvas.getContext('2d');
+            
+            let w = spaceCanvas.width = confCanvas.width = visCanvas.width = window.innerWidth;
+            let h = spaceCanvas.height = confCanvas.height = visCanvas.height = window.innerHeight;
+            
+            window.addEventListener('resize', () => {
+                w = spaceCanvas.width = confCanvas.width = visCanvas.width = window.innerWidth;
+                h = spaceCanvas.height = confCanvas.height = visCanvas.height = window.innerHeight;
+            });
+            
+            let stars = [];
+            for (let i = 0; i < 40; i++) { stars.push({ x: Math.random()*w, y: Math.random()*h, r: Math.random()*1.5+0.5, sX: Math.random()*0.2-0.1, sY: Math.random()*0.2-0.1 }); }
+            
+            // تهيئة بيانات الموجات التفاعلية الوهمية لتمثيل رقص المزيكا
+            let wavesCount = 5;
+            
+            function mainLoopAnimation() {
+                // 1. خلفية النجوم
+                sCtx.clearRect(0,0,w,h); sCtx.fillStyle="rgba(255,255,255,0.4)";
+                stars.forEach(s => { s.x += s.sX; s.y += s.sY; if(s.x<0||s.x>w) s.sX = -s.sX; if(s.y<0||s.y>h) s.sY = -s.sY; sCtx.beginPath(); sCtx.arc(s.x, s.y, s.r, 0, Math.PI*2); sCtx.fill(); });
+                
+                // 2. محرك الموجات الصوتية اللامعة التفاعلية (Audio Visualizer Waves Effect)
+                if(visualizerActive) {
+                    vCtx.clearRect(0,0,w,h);
+                    for (let i = 0; i < wavesCount; i++) {
+                        vCtx.beginPath();
+                        vCtx.strokeStyle = i % 2 === 0 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(139, 92, 246, 0.15)';
+                        vCtx.lineWidth = 3;
+                        
+                        let length = w;
+                        let amplitude = 40 + (i * 15) * Math.sin(Date.now() * 0.002);
+                        let frequency = 0.005 + (i * 0.002);
+                        
+                        vCtx.moveTo(0, h / 2);
+                        for (let x = 0; x < length; x++) {
+                            let y = h / 2 + Math.sin(x * frequency + (Date.now() * 0.004) + i) * amplitude;
+                            vCtx.lineTo(x, y);
+                        }
+                        vCtx.stroke();
+                    }
+                }
+
+                // 3. محرك الورق الملون (Confetti)
+                if(confettiActive) {
+                    cCtx.clearRect(0,0,w,h);
+                    confettiParticles.forEach(p => {
+                        p.y += p.speedY; p.x += p.speedX; p.rotation += p.rotationSpeed;
+                        if(p.y > h) { p.y = -20; p.x = Math.random() * w; }
+                        
+                        cCtx.save(); cCtx.translate(p.x, p.y); cCtx.rotate(p.rotation * Math.PI / 180);
+                        cCtx.fillStyle = p.color; cCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                        cCtx.restore();
+                    });
+                }
+                requestAnimationFrame(mainLoopAnimation);
+            } mainLoopAnimation();
+        });
+    </script>
+</body>
+</html>
